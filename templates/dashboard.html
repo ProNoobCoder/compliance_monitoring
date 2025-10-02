@@ -1,0 +1,248 @@
+{% extends "base.html" %} {% block title %}Dashboard - Compliance Monitoring{%
+endblock %} {% block content %}
+<div class="import-section">
+  <h3>📥 Import Daily Data</h3>
+  <p>
+    Upload an Excel or CSV file containing compliance data. The file may contain
+    up to 3 sheets: Windows Update, Antivirus, and Mobile Encryption.
+  </p>
+  <form
+    action="{{ url_for('import_data') }}"
+    method="POST"
+    enctype="multipart/form-data"
+    id="import-form"
+  >
+    <div style="display: flex; gap: 1rem; align-items: center">
+      <input
+        type="file"
+        name="file"
+        id="file-input"
+        accept=".xlsx,.xls,.csv"
+        required
+      />
+      <button type="submit" class="btn btn-primary" id="import-btn">
+        Import Data
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Summary Stats -->
+<div
+  class="card"
+  style="
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  "
+>
+  <h2 style="color: white; border-bottom-color: rgba(255, 255, 255, 0.3)">
+    📈 Today's Summary
+  </h2>
+  <div
+    style="
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1rem;
+    "
+  >
+    <div style="text-align: center">
+      <div style="font-size: 2.5rem; font-weight: bold">
+        {{ windows_devices|length }}
+      </div>
+      <div style="opacity: 0.9">WINDOWS UPDATE</div>
+    </div>
+    <div style="text-align: center">
+      <div style="font-size: 2.5rem; font-weight: bold">
+        {{ antivirus_devices|length }}
+      </div>
+      <div style="opacity: 0.9">PATTERN FILE</div>
+    </div>
+    <div style="text-align: center">
+      <div style="font-size: 2.5rem; font-weight: bold">
+        {{ mobile_devices|length }}
+      </div>
+      <div style="opacity: 0.9">MOBILE ENCRYPTION</div>
+    </div>
+    <div style="text-align: center">
+      <div style="font-size: 2.5rem; font-weight: bold">
+        {{ windows_devices|length + antivirus_devices|length +
+        mobile_devices|length }}
+      </div>
+      <div style="opacity: 0.9">Total Non-Compliant</div>
+    </div>
+  </div>
+</div>
+
+<h2 style="margin-bottom: 1.5rem">
+  📊 Today's Compliance Status - {{ today.strftime('%B %d, %Y') }}
+</h2>
+
+<!-- Windows Update Section -->
+<div class="card">
+  <div
+    style="display: flex; justify-content: space-between; align-items: center"
+  >
+    <h2>🪟 Windows Update (Non-Compliant Devices)</h2>
+    {% if windows_devices %}
+    <button
+      onclick="pingAll('windows')"
+      class="btn btn-success"
+      id="ping-all-windows"
+    >
+      Ping All Windows Devices
+    </button>
+    {% endif %}
+  </div>
+
+  {% if windows_devices %}
+  <table id="windows-table">
+    <thead>
+      <tr>
+        <th>Device Name</th>
+        <th>UserName</th>
+        <th>IP Address</th>
+        <th>Local</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for device in windows_devices %}
+      <tr>
+        <td id="windows-device-{{ device.id }}">{{ device.hostname }}</td>
+        <td id="windows-device-{{ device.id }}">{{ device.usernname }}</td>
+        <td data-ip="{{ device.ip_address }}" id="windows-ip-{{ device.id }}">
+          {{ device.ip_address }}
+        </td>
+        <td id="windows-update-{{ device.id }}">{{ device.local }}</td>
+        <td>
+          <span
+            class="status-badge status-non-compliant"
+            id="windows-status-{{ device.id }}"
+            >{{ device.status }}</span
+          >
+        </td>
+        <td>
+          <button
+            onclick="pingDevice('{{ device.ip_address }}', this)"
+            class="btn btn-primary btn-small ping-btn"
+            id="ping-windows-{{ device.id }}"
+          >
+            🔍 Ping
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>✅ No non-compliant Windows Update devices today</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Antivirus Section -->
+<div class="card">
+  <div
+    style="display: flex; justify-content: space-between; align-items: center"
+  >
+    <h2>🛡️ Antivirus (Non-Compliant Devices)</h2>
+    {% if antivirus_devices %}
+    <button
+      onclick="pingAll('antivirus')"
+      class="btn btn-success"
+      id="ping-all-antivirus"
+    >
+      Ping All Antivirus Devices
+    </button>
+    {% endif %}
+  </div>
+
+  {% if antivirus_devices %}
+  <table id="antivirus-table">
+    <thead>
+      <tr>
+        <th>Device Name</th>
+        <th>UserName</th>
+        <th>IP Address</th>
+        <th>Local</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for device in antivirus_devices %}
+      <tr>
+        <td id="antivirus-device-{{ device.id }}">{{ device.hostname }}</td>
+        <td id="antivirus-device-{{ device.id }}">{{ device.username }}</td>
+        <td data-ip="{{ device.ip_address }}" id="antivirus-ip-{{ device.id }}">
+          {{ device.ip_address }}
+        </td>
+        <td id="antivirus-scan-{{ device.id }}">{{ device.local }}</td>
+        <td>
+          <span
+            class="status-badge status-non-compliant"
+            id="antivirus-status-{{ device.id }}"
+            >{{ device.status }}</span
+          >
+        </td>
+        <td>
+          <button
+            onclick="pingDevice('{{ device.ip_address }}', this)"
+            class="btn btn-primary btn-small ping-btn"
+            id="ping-antivirus-{{ device.id }}"
+          >
+            🔍 Ping
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>✅ No non-compliant Antivirus devices today</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Mobile Encryption Section -->
+<div class="card">
+  <h2>📱 Mobile Encryption (Non-Compliant Devices)</h2>
+
+  {% if mobile_devices %}
+  <table id="mobile-table">
+    <thead>
+      <tr>
+        <th>Device Name</th>
+        <th>Device Type</th>
+        <th>Encryption Status</th>
+        <th>Owner</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for device in mobile_devices %}
+      <tr>
+        <td id="mobile-device-{{ device.id }}">{{ device.hostname }}</td>
+        <td id="mobile-type-{{ device.id }}">{{ device.device_type }}</td>
+        <td>
+          <span
+            class="status-badge status-non-compliant"
+            id="mobile-status-{{ device.id }}"
+            >{{ device.encryption_status }}</span
+          >
+        </td>
+        <td id="mobile-owner-{{ device.id }}">{{ device.owner }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>✅ No non-compliant Mobile Encryption devices today</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,604 @@
+{% extends "base.html" %} {% block title %}Manage Data - Compliance Monitoring{%
+endblock %} {% block extra_styles %}
+<style>
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #3498db;
+  }
+
+  .close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .close:hover {
+    color: #000;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .tab-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #ddd;
+  }
+
+  .tab-btn {
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s;
+  }
+
+  .tab-btn:hover {
+    background: #f8f9fa;
+  }
+
+  .tab-btn.active {
+    border-bottom-color: #3498db;
+    color: #3498db;
+    font-weight: 600;
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+</style>
+{% endblock %} {% block content %}
+<h2 style="margin-bottom: 1.5rem">⚙️ Data Management (CRUD Operations)</h2>
+
+<!-- Tab Navigation -->
+<div class="tab-buttons">
+  <button
+    class="tab-btn active"
+    onclick="switchTab('windows')"
+    id="tab-btn-windows"
+  >
+    🪟 Windows Update
+  </button>
+  <button
+    class="tab-btn"
+    onclick="switchTab('antivirus')"
+    id="tab-btn-antivirus"
+  >
+    🛡️ Antivirus
+  </button>
+  <button class="tab-btn" onclick="switchTab('mobile')" id="tab-btn-mobile">
+    📱 Mobile Encryption
+  </button>
+</div>
+
+<!-- Windows Update Tab -->
+<div id="tab-windows" class="tab-content active">
+  <div class="card">
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      "
+    >
+      <h2>🪟 Windows Update Records ({{ windows_all|length }})</h2>
+      <button
+        class="btn btn-success"
+        onclick="openAddModal('windows')"
+        id="add-windows-btn"
+      >
+        ➕ Add New Record
+      </button>
+    </div>
+
+    {% if windows_all %}
+    <table id="windows-manage-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Hostname</th>
+          <th>IP Address</th>
+          <th>Local</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for device in windows_all %}
+        <tr>
+          <td id="windows-id-{{ device.id }}">{{ device.id }}</td>
+          <td id="windows-date-{{ device.id }}">
+            {{ device.recorded_date.strftime('%Y-%m-%d') }}
+          </td>
+          <td id="windows-device-{{ device.id }}">{{ device.hostname }}</td>
+          <td id="windows-ip-{{ device.id }}">{{ device.ip_address }}</td>
+          <td id="windows-update-{{ device.id }}">{{ device.local }}</td>
+          <td id="windows-status-{{ device.id }}">{{ device.status }}</td>
+          <td class="action-buttons">
+            <button
+              class="btn btn-warning btn-small"
+              onclick="openEditModal('windows', {{ device.id }})"
+              id="edit-windows-{{ device.id }}"
+            >
+              ✏️ Edit
+            </button>
+            <button
+              class="btn btn-danger btn-small"
+              onclick="deleteRecord('windows', {{ device.id }})"
+              id="delete-windows-{{ device.id }}"
+            >
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <p>No Windows Update records found</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Antivirus Tab -->
+<div id="tab-antivirus" class="tab-content">
+  <div class="card">
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      "
+    >
+      <h2>🛡️ Antivirus Records ({{ antivirus_all|length }})</h2>
+      <button
+        class="btn btn-success"
+        onclick="openAddModal('antivirus')"
+        id="add-antivirus-btn"
+      >
+        ➕ Add New Record
+      </button>
+    </div>
+
+    {% if antivirus_all %}
+    <table id="antivirus-manage-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Device Name</th>
+          <th>IP Address</th>
+          <th>Antivirus Status</th>
+          <th>Last Scan</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for device in antivirus_all %}
+        <tr>
+          <td id="antivirus-id-{{ device.id }}">{{ device.id }}</td>
+          <td id="antivirus-date-{{ device.id }}">
+            {{ device.recorded_date.strftime('%Y-%m-%d') }}
+          </td>
+          <td id="antivirus-device-{{ device.id }}">{{ device.hostname }}</td>
+          <td id="antivirus-ip-{{ device.id }}">{{ device.ip_address }}</td>
+          <td id="antivirus-status-{{ device.id }}">
+            {{ device.antivirus_status }}
+          </td>
+          <td id="antivirus-scan-{{ device.id }}">{{ device.last_scan }}</td>
+          <td class="action-buttons">
+            <button
+              class="btn btn-warning btn-small"
+              onclick="openEditModal('antivirus', {{ device.id }})"
+              id="edit-antivirus-{{ device.id }}"
+            >
+              ✏️ Edit
+            </button>
+            <button
+              class="btn btn-danger btn-small"
+              onclick="deleteRecord('antivirus', {{ device.id }})"
+              id="delete-antivirus-{{ device.id }}"
+            >
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <p>No Antivirus records found</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Mobile Encryption Tab -->
+<div id="tab-mobile" class="tab-content">
+  <div class="card">
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      "
+    >
+      <h2>📱 Mobile Encryption Records ({{ mobile_all|length }})</h2>
+      <button
+        class="btn btn-success"
+        onclick="openAddModal('mobile')"
+        id="add-mobile-btn"
+      >
+        ➕ Add New Record
+      </button>
+    </div>
+
+    {% if mobile_all %}
+    <table id="mobile-manage-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Device Name</th>
+          <th>Device Type</th>
+          <th>Encryption Status</th>
+          <th>Owner</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for device in mobile_all %}
+        <tr>
+          <td id="mobile-id-{{ device.id }}">{{ device.id }}</td>
+          <td id="mobile-date-{{ device.id }}">
+            {{ device.recorded_date.strftime('%Y-%m-%d') }}
+          </td>
+          <td id="mobile-device-{{ device.id }}">{{ device.hostname }}</td>
+          <td id="mobile-type-{{ device.id }}">{{ device.device_type }}</td>
+          <td id="mobile-status-{{ device.id }}">
+            {{ device.encryption_status }}
+          </td>
+          <td id="mobile-owner-{{ device.id }}">{{ device.owner }}</td>
+          <td class="action-buttons">
+            <button
+              class="btn btn-warning btn-small"
+              onclick="openEditModal('mobile', {{ device.id }})"
+              id="edit-mobile-{{ device.id }}"
+            >
+              ✏️ Edit
+            </button>
+            <button
+              class="btn btn-danger btn-small"
+              onclick="deleteRecord('mobile', {{ device.id }})"
+              id="delete-mobile-{{ device.id }}"
+            >
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <p>No Mobile Encryption records found</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal for Add/Edit -->
+<div id="crud-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-title">Add Record</h2>
+      <span class="close" onclick="closeModal()">&times;</span>
+    </div>
+    <form id="crud-form" method="POST">
+      <div id="form-fields"></div>
+      <div style="display: flex; gap: 1rem; margin-top: 1.5rem">
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          Save
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          onclick="closeModal()"
+          id="cancel-btn"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script>
+  // Store all data for editing
+  const windowsData = {{ windows_dict|tojson }};
+  const antivirusData = {{ antivirus_dict|tojson }};
+  const mobileData = {{ mobile_dict|tojson }};
+
+  // Switch between tabs
+  function switchTab(category) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+          tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.classList.remove('active');
+      });
+
+      // Show selected tab
+      document.getElementById('tab-' + category).classList.add('active');
+      document.getElementById('tab-btn-' + category).classList.add('active');
+  }
+
+  // Open modal for adding new record
+  function openAddModal(category) {
+      document.getElementById('modal-title').textContent = 'Add New ' + category.charAt(0).toUpperCase() + category.slice(1) + ' Record';
+      document.getElementById('crud-form').action = '/add/' + category;
+
+      let fields = '';
+
+      if (category === 'windows') {
+          fields = `
+              <div class="form-group">
+                  <label for="hostname">Device Name *</label>
+                  <input type="text" id="hostname" name="hostname" required>
+              </div>
+              <div class="form-group">
+                  <label for="ip_address">IP Address</label>
+                  <input type="text" id="ip_address" name="ip_address">
+              </div>
+              <div class="form-group">
+                  <label for="last_update">Last Update</label>
+                  <input type="text" id="last_update" name="last_update">
+              </div>
+              <div class="form-group">
+                  <label for="status">Status</label>
+                  <select id="status" name="status">
+                      <option value="Non-Compliant">Non-Compliant</option>
+                      <option value="Compliant">Compliant</option>
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label for="recorded_date">Recorded Date *</label>
+                  <input type="date" id="recorded_date" name="recorded_date" required value="${new Date().toISOString().split('T')[0]}">
+              </div>
+          `;
+      } else if (category === 'antivirus') {
+          fields = `
+              <div class="form-group">
+                  <label for="hostname">Device Name *</label>
+                  <input type="text" id="hostname" name="hostname" required>
+              </div>
+              <div class="form-group">
+                  <label for="ip_address">IP Address</label>
+                  <input type="text" id="ip_address" name="ip_address">
+              </div>
+              <div class="form-group">
+                  <label for="antivirus_status">Antivirus Status</label>
+                  <select id="antivirus_status" name="antivirus_status">
+                      <option value="Non-Compliant">Non-Compliant</option>
+                      <option value="Compliant">Compliant</option>
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label for="last_scan">Last Scan</label>
+                  <input type="text" id="last_scan" name="last_scan">
+              </div>
+              <div class="form-group">
+                  <label for="recorded_date">Recorded Date *</label>
+                  <input type="date" id="recorded_date" name="recorded_date" required value="${new Date().toISOString().split('T')[0]}">
+              </div>
+          `;
+      } else if (category === 'mobile') {
+          fields = `
+              <div class="form-group">
+                  <label for="hostname">Device Name *</label>
+                  <input type="text" id="hostname" name="hostname" required>
+              </div>
+              <div class="form-group">
+                  <label for="device_type">Device Type</label>
+                  <input type="text" id="device_type" name="device_type">
+              </div>
+              <div class="form-group">
+                  <label for="encryption_status">Encryption Status</label>
+                  <select id="encryption_status" name="encryption_status">
+                      <option value="Non-Compliant">Non-Compliant</option>
+                      <option value="Compliant">Compliant</option>
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label for="owner">Owner</label>
+                  <input type="text" id="owner" name="owner">
+              </div>
+              <div class="form-group">
+                  <label for="recorded_date">Recorded Date *</label>
+                  <input type="date" id="recorded_date" name="recorded_date" required value="${new Date().toISOString().split('T')[0]}">
+              </div>
+          `;
+      }
+
+      document.getElementById('form-fields').innerHTML = fields;
+      document.getElementById('crud-modal').style.display = 'block';
+  }
+
+  // Open modal for editing record
+  function openEditModal(category, id) {
+      let data;
+      if (category === 'windows') {
+          data = windowsData.find(d => d.id === id);
+      } else if (category === 'antivirus') {
+          data = antivirusData.find(d => d.id === id);
+      } else if (category === 'mobile') {
+          data = mobileData.find(d => d.id === id);
+      }
+
+      if (!data) {
+          alert('Record not found');
+          return;
+      }
+
+      document.getElementById('modal-title').textContent = 'Edit ' + category.charAt(0).toUpperCase() + category.slice(1) + ' Record';
+      document.getElementById('crud-form').action = '/update/' + category + '/' + id;
+
+      let fields = '';
+
+      if (category === 'windows') {
+          fields = `
+              <div class="form-group">
+                  <label for="hostname">Device Name *</label>
+                  <input type="text" id="hostname" name="hostname" value="${data.hostname}" required>
+              </div>
+              <div class="form-group">
+                  <label for="username">User Name *</label>
+                  <input type="text" id="username" name="username" value="${data.username}" required>
+              </div>
+              <div class="form-group">
+                  <label for="ip_address">IP Address</label>
+                  <input type="text" id="ip_address" name="ip_address" value="${data.ip_address || ''}">
+              </div>
+              <div class="form-group">
+                  <label for="local">Last Update</label>
+                  <input type="text" id="local" name="local" value="${data.local || ''}">
+              </div>
+              <div class="form-group">
+                  <label for="status">Status</label>
+                  <select id="status" name="status">
+                      <option value="PENDING" ${data.antivirus_status === 'PENDING' ? 'selected' : ''}>PENDING</option>
+                      <option value="DONE" ${data.antivirus_status === 'DONE' ? 'selected' : ''}>DONE</option>
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label for="recorded_date">Recorded Date *</label>
+                  <input type="date" id="recorded_date" name="recorded_date" value="${data.recorded_date}" required>
+              </div>
+          `;
+      } else if (category === 'antivirus') {
+          fields = `
+              <div class="form-group">
+                  <label for="hostname">Device Name *</label>
+                  <input type="text" id="hostname" name="hostname" value="${data.hostname}" required>
+              </div>
+              <div class="form-group">
+                  <label for="ip_address">IP Address</label>
+                  <input type="text" id="ip_address" name="ip_address" value="${data.ip_address || ''}">
+              </div>
+              <div class="form-group">
+                  <label for="antivirus_status">Antivirus Status</label>
+                  <select id="antivirus_status" name="antivirus_status">
+                      <option value="PENDING" ${data.antivirus_status === 'PENDING' ? 'selected' : ''}>PENDING</option>
+                      <option value="DONE" ${data.antivirus_status === 'DONE' ? 'selected' : ''}>DONE</option>
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label for="last_scan">Last Scan</label>
+                  <input type="text" id="last_scan" name="last_scan" value="${data.last_scan || ''}">
+              </div>
+              <div class="form-group">
+                  <label for="recorded_date">Recorded Date *</label>
+                  <input type="date" id="recorded_date" name="recorded_date" value="${data.recorded_date}" required>
+              </div>
+          `;
+      } else if (category === 'mobile') {
+          fields = `
+              <div class="form-group">
+                  <label for="hostname">Device Name *</label>
+                  <input type="text" id="hostname" name="hostname" value="${data.hostname}" required>
+              </div>
+              <div class="form-group">
+                  <label for="device_type">Device Type</label>
+                  <input type="text" id="device_type" name="device_type" value="${data.device_type || ''}">
+              </div>
+              <div class="form-group">
+                  <label for="encryption_status">Encryption Status</label>
+                  <select id="encryption_status" name="encryption_status">
+                      <option value="PENDING" ${data.antivirus_status === 'PENDING' ? 'selected' : ''}>PENDING</option>
+                      <option value="DONE" ${data.antivirus_status === 'DONE' ? 'selected' : ''}>DONE</option>
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label for="owner">Owner</label>
+                  <input type="text" id="owner" name="owner" value="${data.owner || ''}">
+              </div>
+              <div class="form-group">
+                  <label for="recorded_date">Recorded Date *</label>
+                  <input type="date" id="recorded_date" name="recorded_date" value="${data.recorded_date}" required>
+              </div>
+          `;
+      }
+
+      document.getElementById('form-fields').innerHTML = fields;
+      document.getElementById('crud-modal').style.display = 'block';
+  }
+
+  // Close modal
+  function closeModal() {
+      document.getElementById('crud-modal').style.display = 'none';
+  }
+
+  // Delete record
+  function deleteRecord(category, id) {
+      if (confirm('Are you sure you want to delete this record?')) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/delete/' + category + '/' + id;
+          document.body.appendChild(form);
+          form.submit();
+      }
+  }
+
+  // Close modal when clicking outside
+  window.onclick = function(event) {
+      const modal = document.getElementById('crud-modal');
+      if (event.target === modal) {
+          closeModal();
+      }
+  }
+</script>
+{% endblock %}

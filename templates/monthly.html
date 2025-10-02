@@ -1,0 +1,350 @@
+{% extends "base.html" %} {% block title %}Monthly Report - Compliance
+Monitoring{% endblock %} {% block extra_styles %}
+<style>
+  .chart-container {
+    margin: 2rem 0;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 1rem;
+    opacity: 0.9;
+  }
+</style>
+{% endblock %} {% block content %}
+<h2 style="margin-bottom: 1.5rem">📆 Monthly Compliance Report</h2>
+<p style="font-size: 1.1rem; color: #6c757d; margin-bottom: 2rem">
+  Data from {{ start_date.strftime('%B %d, %Y') }} to {{ end_date.strftime('%B
+  %d, %Y') }}
+</p>
+
+<!-- Monthly Statistics -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ windows_monthly|length }}</div>
+    <div class="stat-label">Windows Update Issues</div>
+  </div>
+  <div
+    class="stat-card"
+    style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+  >
+    <div class="stat-value">{{ antivirus_monthly|length }}</div>
+    <div class="stat-label">Antivirus Issues</div>
+  </div>
+  <div
+    class="stat-card"
+    style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
+  >
+    <div class="stat-value">{{ mobile_monthly|length }}</div>
+    <div class="stat-label">Mobile Encryption Issues</div>
+  </div>
+  <div
+    class="stat-card"
+    style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"
+  >
+    <div class="stat-value">
+      {{ windows_monthly|length + antivirus_monthly|length +
+      mobile_monthly|length }}
+    </div>
+    <div class="stat-label">Total Non-Compliant</div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div class="card">
+  <h2>📊 Monthly Trends</h2>
+
+  <!-- Windows Update Chart -->
+  <div class="chart-container">
+    <h3 style="margin-bottom: 1rem">Windows Update Non-Compliance Trend</h3>
+    <canvas id="windows-chart"></canvas>
+  </div>
+
+  <!-- Antivirus Chart -->
+  <div class="chart-container">
+    <h3 style="margin-bottom: 1rem">Antivirus Non-Compliance Trend</h3>
+    <canvas id="antivirus-chart"></canvas>
+  </div>
+
+  <!-- Mobile Encryption Chart -->
+  <div class="chart-container">
+    <h3 style="margin-bottom: 1rem">Mobile Encryption Non-Compliance Trend</h3>
+    <canvas id="mobile-chart"></canvas>
+  </div>
+
+  <!-- Combined Pie Chart -->
+  <div class="chart-container">
+    <h3 style="margin-bottom: 1rem">Overall Distribution</h3>
+    <canvas id="pie-chart" style="max-height: 400px"></canvas>
+  </div>
+</div>
+
+<!-- Windows Update Monthly Data -->
+<div class="card">
+  <h2>
+    🪟 Windows Update - Monthly Data ({{ windows_monthly|length }} records)
+  </h2>
+  {% if windows_monthly %}
+  <table id="windows-monthly-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Hostname</th>
+        <th>Username</th>
+        <th>IP Address</th>
+        <th>Local</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for device in windows_monthly %}
+      <tr>
+        <td id="windows-date-{{ device.id }}">
+          {{ device.recorded_date.strftime('%Y-%m-%d') }}
+        </td>
+        <td id="windows-device-{{ device.id }}">{{ device.hostname }}</td>
+        <td id="windows-username-{{ device.id }}">{{ device.username }}</td>
+        <td id="windows-ip-{{ device.id }}">{{ device.ip_address }}</td>
+        <td id="windows-local-{{ device.id }}">{{ device.local }}</td>
+        <td>
+          <span class="status-badge status-non-compliant"
+            >{{ device.status }}</span
+          >
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No Windows Update data for this month</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Antivirus Monthly Data -->
+<div class="card">
+  <h2>🛡️ Antivirus - Monthly Data ({{ antivirus_monthly|length }} records)</h2>
+  {% if antivirus_monthly %}
+  <table id="antivirus-monthly-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Hostname</th>
+        <th>User name</th>
+        <th>IP Address</th>
+        <th>Local</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for device in antivirus_monthly %}
+      <tr>
+        <td id="antivirus-date-{{ device.id }}">
+          {{ device.recorded_date.strftime('%Y-%m-%d') }}
+        </td>
+        <td id="antivirus-device-{{ device.id }}">{{ device.hostname }}</td>
+        <td id="antivirus-username-{{ device.id }}">{{ device.username }}</td>
+        <td id="antivirus-ip-{{ device.id }}">{{ device.ip_address }}</td>
+        <td id="antivirus-local-{{ device.id }}">{{ device.local}}</td>
+        <td>
+          <span class="status-badge status-non-compliant"
+            >{{ device.status }}</span
+          >
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No Antivirus data for this month</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Mobile Encryption Monthly Data -->
+<div class="card">
+  <h2>
+    📱 Mobile Encryption - Monthly Data ({{ mobile_monthly|length }} records)
+  </h2>
+  {% if mobile_monthly %}
+  <table id="mobile-monthly-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Hostname</th>
+        <th>Hostname</th>
+        <th>IP Address</th>
+        <th>Local</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for device in mobile_monthly %}
+      <tr>
+        <td id="mobile-date-{{ device.id }}">
+          {{ device.recorded_date.strftime('%Y-%m-%d') }}
+        </td>
+        <td id="mobile-device-{{ device.id }}">{{ device.hostname }}</td>
+        <td id="mobile-username-{{ device.id }}">{{ device.username }}</td>
+        <td id="mobile-ip-{{ device.id }}">{{ device.ip_address }}</td>
+        <td id="mobile-local-{{ device.id }}">{{ device.local }}</td>
+        <td>
+          <span class="status-badge status-non-compliant"
+            >{{ device.status }}</span
+          >
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No Mobile Encryption data for this month</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+  // Prepare data for Windows Update chart
+  const windowsData = {{ windows_chart|tojson }};
+  const windowsDates = windowsData.map(item => item[0]);
+  const windowsCounts = windowsData.map(item => item[1]);
+
+  // Windows Update Chart
+  new Chart(document.getElementById('windows-chart'), {
+      type: 'line',
+      data: {
+          labels: windowsDates,
+          datasets: [{
+              label: 'Non-Compliant Devices',
+              data: windowsCounts,
+              borderColor: '#e74c3c',
+              backgroundColor: 'rgba(231, 76, 60, 0.1)',
+              tension: 0.4,
+              fill: true
+          }]
+      },
+      options: {
+          responsive: true,
+          plugins: {
+              legend: { display: true }
+          },
+          scales: {
+              y: { beginAtZero: true }
+          }
+      }
+  });
+
+  // Prepare data for Antivirus chart
+  const antivirusData = {{ antivirus_chart|tojson }};
+  const antivirusDates = antivirusData.map(item => item[0]);
+  const antivirusCounts = antivirusData.map(item => item[1]);
+
+  // Antivirus Chart
+  new Chart(document.getElementById('antivirus-chart'), {
+      type: 'bar',
+      data: {
+          labels: antivirusDates,
+          datasets: [{
+              label: 'Non-Compliant Devices',
+              data: antivirusCounts,
+              backgroundColor: '#f39c12',
+              borderColor: '#e67e22',
+              borderWidth: 1
+          }]
+      },
+      options: {
+          responsive: true,
+          plugins: {
+              legend: { display: true }
+          },
+          scales: {
+              y: { beginAtZero: true }
+          }
+      }
+  });
+
+  // Prepare data for Mobile Encryption chart
+  const mobileData = {{ mobile_chart|tojson }};
+  const mobileDates = mobileData.map(item => item[0]);
+  const mobileCounts = mobileData.map(item => item[1]);
+
+  // Mobile Encryption Chart
+  new Chart(document.getElementById('mobile-chart'), {
+      type: 'line',
+      data: {
+          labels: mobileDates,
+          datasets: [{
+              label: 'Non-Compliant Devices',
+              data: mobileCounts,
+              borderColor: '#9b59b6',
+              backgroundColor: 'rgba(155, 89, 182, 0.1)',
+              tension: 0.4,
+              fill: true
+          }]
+      },
+      options: {
+          responsive: true,
+          plugins: {
+              legend: { display: true }
+          },
+          scales: {
+              y: { beginAtZero: true }
+          }
+      }
+  });
+
+  // Pie Chart for overall distribution
+  const totalWindows = {{ windows_monthly|length }};
+  const totalAntivirus = {{ antivirus_monthly|length }};
+  const totalMobile = {{ mobile_monthly|length }};
+
+  new Chart(document.getElementById('pie-chart'), {
+      type: 'pie',
+      data: {
+          labels: ['Windows Update', 'Antivirus', 'Mobile Encryption'],
+          datasets: [{
+              data: [totalWindows, totalAntivirus, totalMobile],
+              backgroundColor: ['#e74c3c', '#f39c12', '#9b59b6'],
+              borderWidth: 2
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+              legend: {
+                  display: true,
+                  position: 'bottom'
+              }
+          }
+      }
+  });
+</script>
+{% endblock %}
